@@ -1,53 +1,83 @@
-import express from 'express';
-import multer from 'multer';
-import csvParser from 'csv-parser';
-import fs from 'fs';
-import path from 'path';
+const express = require('express');
+const path = require('path');
+const parseCsvToJson = require('./scripts/parse-csv'); // Import CSV parsing function
+const loadJsonData = require('./scripts/loadJsonData'); // Import JSON loading function
 
 const app = express();
 
-// Set up multer for file uploads (uploads to the 'uploads' folder)
-const upload = multer({ dest: 'uploads/' });
+// Paths to the CSV and resulting JSON file
+const csvFilePath = path.join(__dirname, 'data', 'mock.csv');
+const jsonFilePath = path.join(__dirname, 'data', 'output.json');
 
-// Serve the file upload form (index.html)
-app.use(express.static('public'));
+// Step 1: Check if JSON file exists
+const fs = require('fs');
+if (!fs.existsSync(jsonFilePath)) {
+  // If the JSON file doesn't exist, parse the CSV and generate the JSON file
+  parseCsvToJson(csvFilePath, jsonFilePath).then(() => {
+    // Step 2: Load the JSON data after parsing
+    const jsonData = loadJsonData(jsonFilePath);
 
-// Handle the file upload
-app.post('/upload', upload.single('csvFile'), (req, res) => {
-  const filePath = path.join(__dirname, 'uploads', req.file.filename);
-  const results = [];
+    // Serve the JSON data as an HTML table
+    app.get('/', (req, res) => {
+      let table = '<table border="1"><thead><tr>';
 
-  // Read and parse the CSV file
-  fs.createReadStream(filePath)
-    .pipe(csvParser())
-    .on('data', (data) => results.push(data))
-    .on('end', () => {
-      // Generate the HTML table from the CSV data
-      let table = `<table border="1"><thead><tr>`;
-
-      // Table headers (columns)
-      Object.keys(results[0]).forEach((key) => {
+      // Create headers based on JSON keys
+      Object.keys(jsonData[0]).forEach(key => {
         table += `<th>${key}</th>`;
       });
-      table += `</tr></thead><tbody>`;
+      table += '</tr></thead><tbody>';
 
-      // Table rows (data)
-      results.forEach((row) => {
-        table += `<tr>`;
-        Object.values(row).forEach((value) => {
+      // Add rows with JSON values
+      jsonData.forEach(item => {
+        table += '<tr>';
+        Object.values(item).forEach(value => {
           table += `<td>${value}</td>`;
         });
-        table += `</tr>`;
+        table += '</tr>';
       });
-      table += `</tbody></table>`;
+      table += '</tbody></table>';
 
-      // Send the table as HTML
-      res.send(table);
+      res.send(table); // Send the generated table as the response
     });
-});
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+    // Start the server
+    const PORT = 3000;
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  }).catch(err => {
+    console.error('Error during CSV parsing:', err);
+  });
+} else {
+  // If the JSON file exists, just load it and start the server
+  const jsonData = loadJsonData(jsonFilePath);
+
+  // Serve the JSON data as an HTML table
+  app.get('/', (req, res) => {
+    let table = '<table border="1"><thead><tr>';
+
+    // Create headers based on JSON keys
+    Object.keys(jsonData[0]).forEach(key => {
+      table += `<th>${key}</th>`;
+    });
+    table += '</tr></thead><tbody>';
+
+    // Add rows with JSON values
+    jsonData.forEach(item => {
+      table += '<tr>';
+      Object.values(item).forEach(value => {
+        table += `<td>${value}</td>`;
+      });
+      table += '</tr>';
+    });
+    table += '</tbody></table>';
+
+    res.send(table); // Send the generated table as the response
+  });
+
+  // Start the server
+  const PORT = 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+  });
+}
