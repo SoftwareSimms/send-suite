@@ -2,12 +2,14 @@
   {
     "name": "John Doe",
     "age": "28",
-    "location": "New York"
+    "location": "New York",
+    "toggle": true
   },
   {
     "name": "Jane Smith",
     "age": "34",
-    "location": "San Francisco"
+    "location": "San Francisco",
+    "toggle": false
   },
   {
     "name": "Bob Johnson",

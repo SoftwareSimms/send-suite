@@ -1,9 +1,7 @@
-const fs = require('fs');
+import fs from 'fs';
 
 // Function to load the JSON file
-function loadJsonData(filePath) {
+export function loadJsonData(filePath) {
   const rawData = fs.readFileSync(filePath, 'utf8');
   return JSON.parse(rawData);  // Parse the file content into JSON
 }
-
-module.exports = loadJsonData;
